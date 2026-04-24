@@ -1,0 +1,11 @@
+{
+  "name": "cosmax-dashboard",
+  "version": "1.0.0",
+  "description": "COSMAX 생산 자동화 대시보드",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

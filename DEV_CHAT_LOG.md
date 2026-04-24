@@ -109,3 +109,79 @@
 - 2026-02-03: Removed -KeywordOnly from korea_mfg_top50 Run-Daily_ToMe.ps1; appended discovered companies into companies_seed.csv with filters and removed AI?? row.
 
 - 2026-02-03: Updated Update-Dashboard.ps1 default output to Dashboard_design_v8.html and added tech tag normalization; Run-Daily_ToMe.ps1 now passes v8 dashboard path.
+## Session 12 (2026-02-05)
+- User noted logs are not fully up to date and requested automatic meaningful updates going forward without prompting.
+- Current baseline: UI renders acceptably; v10 is the working visual baseline despite mojibake risk.
+- New priorities:
+  1) Build 투자효과 page with Excel integration.
+  2) Connect 자동화율 page to Excel source.
+  3) Decide how to share HTML with team.
+  4) Sync scheduled daily 8am article emails with web dashboard updates.
+  5) Update KPI 관리지표 page to 2026 baseline.
+
+## Session 13 (2026-02-05)
+- User requested new V11 workflow without modifying generate_dashboard.py.
+- Plan: create V11 HTML copy and new v11-specific updater script to inject automation data from shared Excel (충포장 공정 자동화율 (한국) 4.xlsx) into V11 data block with caching.
+
+## Session 14 (2026-02-05)
+- Linked hub automation KPI to overallRate from V11 data: removed hardcoded 47.3 in automation trend and KPI summary; now uses data.overallRate * 100.
+
+## Session 15 (2026-02-05)
+- Created V12 HTML with external articles.json and fetch-based loading (fallback to embedded).
+- Generated articles.json from V11 embedded articleData.
+- Added update_v12.py using latest shared Excel and separate cache/index files.
+
+## Session 16 (2026-02-05)
+- Created v12 folder structure (v12/Dashboard.html, v12/articles.json, v12/update_v12.py) to avoid clutter.
+- update_v12.py now targets v12/Dashboard.html and uses shared mapping from private folder.
+## 2026-02-06 작업 요약
+
+### 결정/원칙
+- 공유용 `Dashboard.html`은 유지하되, 개발/검증은 로컬 `Dashboard_dev.html`로 진행.
+- 기사 데이터는 HTML 내장 방식 유지(외부 JSON fetch 제거).
+- 기사 목록은 누적 저장(중복 제거, 최신순 정렬).
+- KPI 실적은 **0이 나오는 첫 달 이후 누계 그래프 0 처리**.
+
+### 경로
+- 개발용 대시보드: `C:\Users\jungwoo.kang\0_dashboard\v12\Dashboard_dev.html`
+- 공유용 대시보드: `C:\Users\jungwoo.kang\COSMAX\표인필 (Inpil Pyo) COSMAX - E. 공정 자동화율\TEST\Dashboard.html`
+- KPI 원본 엑셀: `C:\Users\jungwoo.kang\COSMAX\표인필 (Inpil Pyo) COSMAX - E. 공정 자동화율\TEST\260203_ OKR_AI자동화팀 진행현황_rev1.xlsx`
+- 자동화율 원본 폴더: `C:\Users\jungwoo.kang\COSMAX\표인필 (Inpil Pyo) COSMAX - E. 공정 자동화율`
+
+### 핵심 스크립트/배치
+- `C:\Users\jungwoo.kang\0_dashboard\Update-Dashboard.ps1`
+  - 기사 누적: 기존 `articles.json` + 신규 합치고 중복 제거(Url 우선) + 최신순 정렬
+  - 기사 UI 복구 시 템플릿 우선순위: `0_dashboard\v12\Dashboard_dev.html` → `0_dashboard\Dashboard_design_v10.html`
+  - 기본 DashboardPath: `C:\Users\jungwoo.kang\0_dashboard\v12\Dashboard_dev.html`
+- `C:\Users\jungwoo.kang\0_dashboard\v12\update_v12.py`
+  - 자동화율 데이터는 출력 대상(`--output`) HTML에 직접 적용
+- `C:\Users\jungwoo.kang\0_dashboard\v12\update_kpi_v12.py`
+  - KPI 월별/누계/메인허브 목표 동기화
+  - KPI 카드(인원합리화/설비개선/글로벌) 자동 갱신
+  - KPI 캐시: `C:\Users\jungwoo.kang\0_dashboard\v12\v12_kpi_cache.json`
+- 더블클릭 실행
+  - 업데이트(개발용): `C:\Users\jungwoo.kang\0_dashboard\update_dev.bat`
+  - 메일+업데이트(통합): `C:\Users\jungwoo.kang\0_dashboard\send_and_update.bat`
+  - 통합 PS1: `C:\Users\jungwoo.kang\0_dashboard\send_and_update.ps1`
+    - `Run-Daily_ToMe.ps1` 경로는 한글 `업무`를 `[char]`로 안전 조합
+
+### KPI 반영 내용
+- `종합 실적 관리` 시트 기준
+- 월별 실적은 **첫 0 이후 달은 0 처리** (누계도 0으로 표시)
+- KPI 카드 값/달성율은 합계(행 5의 “합계” 컬럼) 기준
+- 인원합리화 카드 값에 단위 추가 + 작은 글씨
+  - CSS: `.value .unit` 추가 (색상은 본문과 동일)
+
+### UI/동작 변경
+- 메인허브 월별 누계 실적 탭 클릭 시 KPI 누계 그래프 렌더
+- 누계 그래프에서 실적 0 이후 달은 0 표시
+- 기사 목록 로딩은 내장 데이터(`window.articleData`) 사용
+
+### 발생한 이슈/해결
+- `Update-Dashboard.ps1` 파라미터에 깨진 한글 → 수정 완료
+- 배치 파일 한글 경로 깨짐 → `.ps1` 경유로 해결
+- RSS 수집 `curl.exe exit code 35` 발생 시 메일 단계 실패 가능
+
+### 다음 단계
+- `send_and_update.ps1` 실행 결과 확인(메일+대시보드 전체 파이프라인)
+- RSS 수집 실패 시 프록시/SSL 문제 점검 또는 `curl` 대체 필요

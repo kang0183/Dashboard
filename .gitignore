@@ -3,3 +3,22 @@
 !Dashboard_design_v10.html
 !DEV_CHAT_LOG.md
 !PLANNER_CHAT_LOG.md
+!CLAUDE.md
+
+# GitHub Actions
+!.github/
+!.github/workflows/
+!.github/workflows/deploy-apprunner.yml
+
+# App Runner 배포 파일
+!v12/
+!v12/deploy/
+!v12/deploy/apprunner.yaml
+!v12/deploy/package.json
+!v12/deploy/server.js
+!v12/deploy/Dockerfile
+!v12/deploy/nginx.conf
+!v12/deploy/index.html
+!v12/deploy/data.json
+!v12/deploy/articles.json
+!v12/APPRUNNER_MIGRATION.md
