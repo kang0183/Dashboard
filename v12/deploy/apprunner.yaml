@@ -2,7 +2,8 @@ version: 1.0
 runtime: nodejs18
 build:
   commands:
-    build: echo "Static dashboard - no build required"
+    build:
+      - echo "Static dashboard - no build required"
 run:
   command: npm start
 network:
