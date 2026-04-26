@@ -966,6 +966,42 @@
       .report-grid { gap:10px; }
       @page { size:A4; margin:10mm; }
     }
+
+    /* ── 실적 입력 ── */
+    .input-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:16px;}
+    .input-tab{padding:8px 18px;font-size:13px;cursor:pointer;border:none;background:none;color:var(--muted);border-bottom:2px solid transparent;font-family:inherit;}
+    .input-tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600;}
+    .input-tbl{width:100%;border-collapse:collapse;font-size:13px;}
+    .input-tbl th{background:var(--panel-bg);padding:8px 10px;text-align:left;color:var(--muted);font-weight:600;border-bottom:1px solid var(--border);font-size:11px;white-space:nowrap;}
+    .input-tbl td{padding:7px 10px;border-bottom:1px solid var(--border);vertical-align:middle;}
+    .input-tbl tr:hover td{background:#f9fafb;}
+    .ibtn{padding:4px 10px;border-radius:5px;border:none;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;}
+    .ibtn-p{background:var(--accent);color:#fff;}
+    .ibtn-d{background:#fee2e2;color:#dc2626;}
+    .ibtn-g{background:#f3f4f6;color:#374151;}
+    .ibtn-s{background:#d1fae5;color:#065f46;}
+    .imodal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:900;align-items:center;justify-content:center;}
+    .imodal-ov.open{display:flex;}
+    .imodal{background:#fff;border-radius:8px;padding:24px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.18);}
+    .imodal h4{margin:0 0 16px;font-size:15px;}
+    .fg{margin-bottom:12px;}
+    .fg label{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:4px;}
+    .fg input,.fg select,.fg textarea{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;box-sizing:border-box;font-family:inherit;}
+    .fg input:focus,.fg select:focus,.fg textarea:focus{outline:none;border-color:var(--accent);}
+    .fg textarea{resize:vertical;min-height:60px;}
+    .frow{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    .frow3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+    .gg{width:100%;border-collapse:collapse;font-size:12px;}
+    .gg th{background:var(--panel-bg);padding:6px 4px;text-align:center;border:1px solid var(--border);font-size:11px;color:var(--muted);white-space:nowrap;}
+    .gg td{border:1px solid var(--border);padding:2px;}
+    .gg td.ml{padding:6px 8px;font-weight:600;color:var(--muted);text-align:center;white-space:nowrap;background:var(--panel-bg);}
+    .gg td.tot{padding:6px 4px;text-align:center;font-weight:700;background:#f0f9ff;color:#0369a1;}
+    .gi{width:100%;padding:4px 2px;border:1px solid transparent;border-radius:3px;text-align:center;font-size:12px;background:transparent;font-family:inherit;}
+    .gi:focus{border-color:var(--accent);background:#fff;outline:none;}
+    .inwon-monthly-tbl{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;}
+    .inwon-monthly-tbl th{background:#f8fafc;padding:5px 8px;border-bottom:1px solid var(--border);font-size:11px;color:var(--muted);}
+    .inwon-monthly-tbl td{padding:5px 8px;border-bottom:1px solid #f3f4f6;}
+    .chip-new{display:inline-block;font-size:10px;padding:1px 6px;border-radius:9999px;background:#fef9c3;color:#854d0e;font-weight:600;}
 </style>
 </head>
 <body>
@@ -990,6 +1026,7 @@
         <button class="side-btn" id="nav-automation" onclick="openAutomation()">공정 자동화율</button>
         <button class="side-btn" id="nav-kpi" onclick="showSection('kpi')">KPI 관리 지표</button>
         <button class="side-btn" id="nav-robot" onclick="showSection('robot')">로봇 & 최신정보</button>
+        <button class="side-btn" id="nav-input" onclick="showSection('input')">실적 입력</button>
       </nav>
     </aside>
     <main class="main">
@@ -1183,6 +1220,91 @@
           </div>
         </div>
       </section>
+
+      <section id="section-input" class="hidden">
+        <div class="panel full">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+            <h3 style="margin:0;">실적 입력</h3>
+            <span id="input-save-msg" style="font-size:12px;color:#059669;"></span>
+          </div>
+          <div class="input-tabs">
+            <button class="input-tab active" onclick="switchInputTab('equip',this)">설비 개선</button>
+            <button class="input-tab" onclick="switchInputTab('inwon',this)">인원 합리화</button>
+            <button class="input-tab" onclick="switchInputTab('global',this)">글로벌 생산기술</button>
+          </div>
+          <div id="itab-equip"></div>
+          <div id="itab-inwon" class="hidden"></div>
+          <div id="itab-global" class="hidden"></div>
+        </div>
+      </section>
+
+      <!-- 설비개선 모달 -->
+      <div class="imodal-ov" id="equip-modal" onclick="if(event.target===this)closeEquipModal()">
+        <div class="imodal">
+          <h4 id="equip-modal-title">설비 개선 항목 추가</h4>
+          <input type="hidden" id="equip-edit-idx" value="">
+          <div class="frow">
+            <div class="fg"><label>완료(월)</label><select id="ef-month" class="form-input">
+              <option value="">선택</option>
+              <option>1</option><option>2</option><option>3</option><option>4</option>
+              <option>5</option><option>6</option><option>7</option><option>8</option>
+              <option>9</option><option>10</option><option>11</option><option>12</option>
+            </select></div>
+            <div class="fg"><label>진행상황</label><select id="ef-status">
+              <option value="진행중">진행중</option><option value="완료">완료</option>
+            </select></div>
+          </div>
+          <div class="frow">
+            <div class="fg"><label>담당자</label><input id="ef-mgr" placeholder="담당자"></div>
+            <div class="fg"><label>투자 금액 (백만원)</label><input id="ef-amt" type="number" step="0.1" placeholder="0.0"></div>
+          </div>
+          <div class="fg"><label>투자 내용</label><input id="ef-content" placeholder="투자 내용"></div>
+          <div class="fg"><label>비고 / 상세 내역</label><textarea id="ef-note" placeholder="상세 내역 입력"></textarea></div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
+            <button class="ibtn ibtn-g" onclick="closeEquipModal()">취소</button>
+            <button class="ibtn ibtn-p" onclick="saveEquipItem()">저장</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 인원합리화 신규/편집 모달 -->
+      <div class="imodal-ov" id="inwon-modal" onclick="if(event.target===this)closeInwonModal()">
+        <div class="imodal">
+          <h4 id="inwon-modal-title">인원합리화 항목</h4>
+          <input type="hidden" id="inwon-edit-idx" value="">
+          <div class="frow">
+            <div class="fg"><label>구분</label><select id="iw-type">
+              <option>자동화</option><option>증설투자</option><option>기타</option>
+            </select></div>
+            <div class="fg"><label>유형</label><input id="iw-category" placeholder="파우더, 립글로즈 등"></div>
+          </div>
+          <div class="frow">
+            <div class="fg"><label>담당자</label><input id="iw-mgr" placeholder="담당자"></div>
+            <div class="fg"><label>인원합리화 인원 (명)</label><input id="iw-headcount" type="number" placeholder="0"></div>
+          </div>
+          <div class="fg"><label>투자명</label><input id="iw-name" placeholder="투자 프로젝트명"></div>
+          <div class="fg"><label>설비명</label><input id="iw-equip" placeholder="설비명"></div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
+            <button class="ibtn ibtn-g" onclick="closeInwonModal()">취소</button>
+            <button class="ibtn ibtn-p" onclick="saveInwonItem()">저장</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 인원합리화 월별 입력 모달 -->
+      <div class="imodal-ov" id="inwon-monthly-modal" onclick="if(event.target===this)closeInwonMonthly()">
+        <div class="imodal" style="width:480px;">
+          <h4 id="inwon-monthly-title">월별 실적 입력</h4>
+          <div id="inwon-monthly-body"></div>
+          <div style="margin-top:12px;display:flex;gap:8px;justify-content:space-between;align-items:center;">
+            <button class="ibtn ibtn-g" onclick="addInwonMonthRow()">+ 월 추가</button>
+            <div style="display:flex;gap:8px;">
+              <button class="ibtn ibtn-g" onclick="closeInwonMonthly()">취소</button>
+              <button class="ibtn ibtn-p" onclick="saveInwonMonthly()">저장</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </main>
   </div>
 
@@ -1423,7 +1545,7 @@
       navigate({ view: 'line', factory: factoryName, line: lineName });
     }
     function showSection(key) {
-      const sections = ['home', 'automation', 'kpi', 'robot'];
+      const sections = ['home', 'automation', 'kpi', 'robot', 'input'];
       sections.forEach(function(id) {
         const section = document.getElementById('section-' + id);
         const btn = document.getElementById('nav-' + id);
@@ -1435,10 +1557,15 @@
         automation: '공정 자동화율',
         kpi: 'KPI 관리 지표',
         robot: '로봇 & 최신정보',
+        input: '실적 입력',
       };
       document.getElementById('page-title').textContent = titleMap[key] || '페이지';
       if (key !== 'automation') {
         history.replaceState({ view: 'main' }, '', '');
+      }
+      if (key === 'input') {
+        initInputStorage();
+        renderEquipTab();
       }
     }
     function openAutomation() {
@@ -2207,6 +2334,353 @@
       }
       loadRobotNews();
     }
+
+    // ── 실적 입력 ─────────────────────────────────────────────
+    const COUNTRIES = ['한국','상해','광저우','인니','태국','미국','영페이스','네오'];
+
+    // Storage layer — swap get/set for API calls when DB is ready
+    const KpiStore = {
+      get(k)    { try { return JSON.parse(localStorage.getItem('kpi_'+k)) ?? null; } catch { return null; } },
+      set(k, v) { localStorage.setItem('kpi_'+k, JSON.stringify(v)); showSaveMsg(); },
+    };
+
+    function showSaveMsg() {
+      const el = document.getElementById('input-save-msg');
+      el.textContent = '저장됨 ✓';
+      clearTimeout(el._t);
+      el._t = setTimeout(() => el.textContent = '', 2000);
+    }
+
+    // Init storage from kpiDetail on first load
+    function initInputStorage() {
+      if (!KpiStore.get('equip') && kpiDetail && kpiDetail.설비개선) {
+        KpiStore.set('equip', kpiDetail.설비개선.map(d => ({
+          no: d.no, month: d.month, mgr: d.담당, content: d.투자내용,
+          status: d.진행상황 || '완료', amt: d.금액 || '', note: ''
+        })));
+      }
+      if (!KpiStore.get('inwon') && kpiDetail && kpiDetail.인원합리화) {
+        KpiStore.set('inwon', kpiDetail.인원합리화.map(d => ({
+          no: d.no, type: d.구분, category: d.유형, mgr: d.담당자,
+          name: d.투자명, equip: d.설비명, headcount: d.인원,
+          monthly: Object.fromEntries(
+            Object.entries(d.월별효과 || {}).map(([m, v]) => [m, { eff: v, opr: '' }])
+          ),
+          isNew: false
+        })));
+      }
+      if (!KpiStore.get('global') && kpiDetail && kpiDetail.글로벌) {
+        const g = {};
+        for (const [m, cd] of Object.entries(kpiDetail.글로벌)) {
+          g[m] = typeof cd === 'object' ? cd : Object.fromEntries(COUNTRIES.map(c => [c, 0]));
+        }
+        for (let m = 1; m <= 12; m++) {
+          if (!g[m]) g[m] = Object.fromEntries(COUNTRIES.map(c => [c, 0]));
+        }
+        KpiStore.set('global', g);
+      }
+      if (!KpiStore.get('global')) {
+        const g = {};
+        for (let m = 1; m <= 12; m++) g[m] = Object.fromEntries(COUNTRIES.map(c => [c, 0]));
+        KpiStore.set('global', g);
+      }
+    }
+
+    function switchInputTab(tab, btn) {
+      document.querySelectorAll('.input-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      ['equip','inwon','global'].forEach(t => {
+        document.getElementById('itab-'+t).classList.toggle('hidden', t !== tab);
+      });
+      if (tab === 'equip') renderEquipTab();
+      if (tab === 'inwon') renderInwonTab();
+      if (tab === 'global') renderGlobalTab();
+    }
+
+    // ── 설비개선 탭 ──────────────────────────────────────────
+    function renderEquipTab() {
+      const items = KpiStore.get('equip') || [];
+      const rows = items.map((d, i) => `
+        <tr>
+          <td style="color:var(--muted);font-size:11px">${d.no || i+1}</td>
+          <td>${d.month ? d.month+'월' : '-'}</td>
+          <td>${d.mgr || ''}</td>
+          <td style="max-width:220px">${d.content || ''}</td>
+          <td><span style="padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;background:${d.status==='완료'?'#d1fae5':'#fef3c7'};color:${d.status==='완료'?'#065f46':'#92400e'}">${d.status||''}</span></td>
+          <td style="text-align:right">${d.amt !== '' && d.amt != null ? d.amt+'M' : '-'}</td>
+          <td style="max-width:120px;color:var(--muted);font-size:11px">${d.note || ''}</td>
+          <td style="white-space:nowrap">
+            <button class="ibtn ibtn-g" style="margin-right:4px" onclick="openEquipEdit(${i})">수정</button>
+            <button class="ibtn ibtn-d" onclick="deleteEquipItem(${i})">삭제</button>
+          </td>
+        </tr>`).join('');
+      document.getElementById('itab-equip').innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <span class="subtle">${items.length}개 항목</span>
+          <button class="ibtn ibtn-p" onclick="openEquipAdd()">+ 항목 추가</button>
+        </div>
+        <div style="overflow-x:auto">
+        <table class="input-tbl">
+          <thead><tr><th>No</th><th>완료월</th><th>담당자</th><th>투자 내용</th><th>진행상황</th><th>금액(M)</th><th>비고/상세</th><th></th></tr></thead>
+          <tbody>${rows || '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">항목이 없습니다. 추가해주세요.</td></tr>'}</tbody>
+        </table></div>`;
+    }
+
+    function openEquipAdd() {
+      document.getElementById('equip-modal-title').textContent = '설비 개선 항목 추가';
+      document.getElementById('equip-edit-idx').value = '';
+      ['ef-month','ef-status','ef-mgr','ef-amt','ef-content','ef-note'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el.tagName === 'SELECT') el.selectedIndex = 0;
+        else el.value = '';
+      });
+      document.getElementById('ef-status').value = '완료';
+      document.getElementById('equip-modal').classList.add('open');
+    }
+
+    function openEquipEdit(i) {
+      const d = (KpiStore.get('equip') || [])[i];
+      if (!d) return;
+      document.getElementById('equip-modal-title').textContent = '설비 개선 항목 수정';
+      document.getElementById('equip-edit-idx').value = i;
+      document.getElementById('ef-month').value = d.month || '';
+      document.getElementById('ef-status').value = d.status || '완료';
+      document.getElementById('ef-mgr').value = d.mgr || '';
+      document.getElementById('ef-amt').value = d.amt !== '' ? d.amt : '';
+      document.getElementById('ef-content').value = d.content || '';
+      document.getElementById('ef-note').value = d.note || '';
+      document.getElementById('equip-modal').classList.add('open');
+    }
+
+    function closeEquipModal() { document.getElementById('equip-modal').classList.remove('open'); }
+
+    function saveEquipItem() {
+      const items = KpiStore.get('equip') || [];
+      const idx = document.getElementById('equip-edit-idx').value;
+      const item = {
+        no: idx !== '' ? (items[+idx]?.no || +idx+1) : items.length + 1,
+        month: parseInt(document.getElementById('ef-month').value) || null,
+        mgr: document.getElementById('ef-mgr').value.trim(),
+        content: document.getElementById('ef-content').value.trim(),
+        status: document.getElementById('ef-status').value,
+        amt: document.getElementById('ef-amt').value !== '' ? parseFloat(document.getElementById('ef-amt').value) : '',
+        note: document.getElementById('ef-note').value.trim(),
+      };
+      if (idx !== '') items[+idx] = item;
+      else items.push(item);
+      KpiStore.set('equip', items);
+      closeEquipModal();
+      renderEquipTab();
+    }
+
+    function deleteEquipItem(i) {
+      if (!confirm('삭제하시겠습니까?')) return;
+      const items = KpiStore.get('equip') || [];
+      items.splice(i, 1);
+      KpiStore.set('equip', items);
+      renderEquipTab();
+    }
+
+    // ── 인원합리화 탭 ─────────────────────────────────────────
+    function renderInwonTab() {
+      const items = KpiStore.get('inwon') || [];
+      const rows = items.map((d, i) => `
+        <tr>
+          <td style="color:var(--muted);font-size:11px">${d.no || i+1}${d.isNew ? ' <span class="chip-new">신규</span>' : ''}</td>
+          <td>${d.type||''}</td><td>${d.category||''}</td><td>${d.mgr||''}</td>
+          <td style="max-width:180px">${d.name||''}</td>
+          <td>${d.equip||''}</td>
+          <td style="text-align:center">${d.headcount||0}명</td>
+          <td style="color:var(--muted);font-size:11px">${Object.keys(d.monthly||{}).filter(m=>d.monthly[m]?.eff).map(m=>m+'월').join(', ')||'-'}</td>
+          <td style="white-space:nowrap">
+            <button class="ibtn ibtn-s" style="margin-right:4px" onclick="openInwonMonthly(${i})">월별 입력</button>
+            <button class="ibtn ibtn-g" style="margin-right:4px" onclick="openInwonEdit(${i})">수정</button>
+            <button class="ibtn ibtn-d" onclick="deleteInwonItem(${i})">삭제</button>
+          </td>
+        </tr>`).join('');
+      document.getElementById('itab-inwon').innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <span class="subtle">${items.length}개 항목</span>
+          <button class="ibtn ibtn-p" onclick="openInwonAdd()">+ 신규 투자 추가</button>
+        </div>
+        <div style="overflow-x:auto">
+        <table class="input-tbl">
+          <thead><tr><th>No</th><th>구분</th><th>유형</th><th>담당자</th><th>투자명</th><th>설비명</th><th>인원</th><th>입력된 월</th><th></th></tr></thead>
+          <tbody>${rows || '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px">항목이 없습니다.</td></tr>'}</tbody>
+        </table></div>`;
+    }
+
+    function openInwonAdd() {
+      document.getElementById('inwon-modal-title').textContent = '신규 투자 추가';
+      document.getElementById('inwon-edit-idx').value = '';
+      ['iw-type','iw-category','iw-mgr','iw-headcount','iw-name','iw-equip'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el.tagName === 'SELECT') el.selectedIndex = 0;
+        else el.value = '';
+      });
+      document.getElementById('inwon-modal').classList.add('open');
+    }
+
+    function openInwonEdit(i) {
+      const d = (KpiStore.get('inwon') || [])[i];
+      if (!d) return;
+      document.getElementById('inwon-modal-title').textContent = '항목 수정';
+      document.getElementById('inwon-edit-idx').value = i;
+      document.getElementById('iw-type').value = d.type || '자동화';
+      document.getElementById('iw-category').value = d.category || '';
+      document.getElementById('iw-mgr').value = d.mgr || '';
+      document.getElementById('iw-headcount').value = d.headcount || '';
+      document.getElementById('iw-name').value = d.name || '';
+      document.getElementById('iw-equip').value = d.equip || '';
+      document.getElementById('inwon-modal').classList.add('open');
+    }
+
+    function closeInwonModal() { document.getElementById('inwon-modal').classList.remove('open'); }
+
+    function saveInwonItem() {
+      const items = KpiStore.get('inwon') || [];
+      const idx = document.getElementById('inwon-edit-idx').value;
+      const isNew = idx === '';
+      const base = isNew ? {} : items[+idx];
+      const item = {
+        ...base,
+        no: isNew ? items.length + 1 : base.no,
+        type: document.getElementById('iw-type').value,
+        category: document.getElementById('iw-category').value.trim(),
+        mgr: document.getElementById('iw-mgr').value.trim(),
+        headcount: parseInt(document.getElementById('iw-headcount').value) || 0,
+        name: document.getElementById('iw-name').value.trim(),
+        equip: document.getElementById('iw-equip').value.trim(),
+        monthly: base.monthly || {},
+        isNew: isNew,
+      };
+      if (!isNew) items[+idx] = item;
+      else items.push(item);
+      KpiStore.set('inwon', items);
+      closeInwonModal();
+      renderInwonTab();
+    }
+
+    function deleteInwonItem(i) {
+      if (!confirm('삭제하시겠습니까?')) return;
+      const items = KpiStore.get('inwon') || [];
+      items.splice(i, 1);
+      KpiStore.set('inwon', items);
+      renderInwonTab();
+    }
+
+    let _inwonMonthlyIdx = -1;
+    function openInwonMonthly(i) {
+      _inwonMonthlyIdx = i;
+      const d = (KpiStore.get('inwon') || [])[i];
+      if (!d) return;
+      document.getElementById('inwon-monthly-title').textContent = `월별 실적 입력 — ${d.name || '항목 '+i}`;
+      renderInwonMonthlyBody(d.monthly || {});
+      document.getElementById('inwon-monthly-modal').classList.add('open');
+    }
+
+    function renderInwonMonthlyBody(monthly) {
+      const months = Array.from(new Set([...Object.keys(monthly).map(Number)])).sort((a,b)=>a-b);
+      if (months.length === 0) months.push(new Date().getMonth() + 1);
+      const rows = months.map(m => `
+        <tr>
+          <td style="padding:4px 8px;font-weight:600;color:var(--muted);white-space:nowrap">${m}월</td>
+          <td style="padding:4px 8px"><input class="gi" style="border:1px solid var(--border);background:#fff;border-radius:4px;width:80px" 
+            data-m="${m}" data-f="eff" type="number" step="0.01" value="${monthly[m]?.eff||''}" placeholder="효과"></td>
+          <td style="padding:4px 8px"><input class="gi" style="border:1px solid var(--border);background:#fff;border-radius:4px;width:70px"
+            data-m="${m}" data-f="opr" type="number" step="0.01" min="0" max="1" value="${monthly[m]?.opr||''}" placeholder="가동율"></td>
+          <td style="padding:4px 8px"><button class="ibtn ibtn-d" onclick="removeInwonMonthRow(${m})">삭제</button></td>
+        </tr>`).join('');
+      document.getElementById('inwon-monthly-body').innerHTML = `
+        <table class="inwon-monthly-tbl" style="width:100%">
+          <thead><tr><th>월</th><th>투자효과 (백만원)</th><th>가동율</th><th></th></tr></thead>
+          <tbody id="inwon-month-rows">${rows}</tbody>
+        </table>`;
+    }
+
+    function addInwonMonthRow() {
+      const existing = [...document.querySelectorAll('#inwon-month-rows tr')].map(tr => parseInt(tr.querySelector('[data-m]').dataset.m));
+      const next = Array.from({length:12},(_,i)=>i+1).find(m => !existing.includes(m));
+      if (!next) return;
+      const monthly = {};
+      existing.forEach(m => {
+        monthly[m] = {
+          eff: document.querySelector(`[data-m="${m}"][data-f="eff"]`)?.value || '',
+          opr: document.querySelector(`[data-m="${m}"][data-f="opr"]`)?.value || '',
+        };
+      });
+      monthly[next] = { eff: '', opr: '' };
+      renderInwonMonthlyBody(monthly);
+    }
+
+    function removeInwonMonthRow(m) {
+      const row = document.querySelector(`[data-m="${m}"][data-f="eff"]`)?.closest('tr');
+      if (row) row.remove();
+    }
+
+    function saveInwonMonthly() {
+      const items = KpiStore.get('inwon') || [];
+      const d = items[_inwonMonthlyIdx];
+      if (!d) return;
+      const monthly = {};
+      document.querySelectorAll('#inwon-month-rows tr').forEach(tr => {
+        const m = parseInt(tr.querySelector('[data-m]').dataset.m);
+        const eff = tr.querySelector('[data-f="eff"]').value;
+        const opr = tr.querySelector('[data-f="opr"]').value;
+        if (eff !== '' || opr !== '') monthly[m] = { eff: eff !== '' ? parseFloat(eff) : '', opr: opr !== '' ? parseFloat(opr) : '' };
+      });
+      d.monthly = monthly;
+      items[_inwonMonthlyIdx] = d;
+      KpiStore.set('inwon', items);
+      closeInwonMonthly();
+      renderInwonTab();
+    }
+
+    function closeInwonMonthly() { document.getElementById('inwon-monthly-modal').classList.remove('open'); }
+
+    // ── 글로벌 탭 ────────────────────────────────────────────
+    function renderGlobalTab() {
+      const g = KpiStore.get('global') || {};
+      const header = `<tr><th>월</th>${COUNTRIES.map(c=>`<th>${c}</th>`).join('')}<th>합계</th></tr>`;
+      const rows = Array.from({length:12},(_,i)=>i+1).map(m => {
+        const cd = g[m] || {};
+        const cells = COUNTRIES.map(c => `<td><input class="gi" data-m="${m}" data-c="${c}" type="number" min="0" value="${cd[c]||0}" oninput="updateGlobalTotal(${m})"></td>`).join('');
+        const tot = COUNTRIES.reduce((s,c) => s+(parseInt(cd[c])||0), 0);
+        return `<tr><td class="ml">${m}월</td>${cells}<td class="tot" id="gtot-${m}">${tot}</td></tr>`;
+      }).join('');
+      document.getElementById('itab-global').innerHTML = `
+        <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
+          <button class="ibtn ibtn-p" onclick="saveGlobal()">저장</button>
+        </div>
+        <div style="overflow-x:auto">
+        <table class="gg">
+          <thead>${header}</thead>
+          <tbody>${rows}</tbody>
+        </table></div>
+        <p class="subtle" style="margin-top:8px;font-size:11px">각 셀에 건수 입력 후 저장 버튼을 누르세요.</p>`;
+    }
+
+    function updateGlobalTotal(m) {
+      const tot = COUNTRIES.reduce((s,c) => {
+        const v = parseInt(document.querySelector(`[data-m="${m}"][data-c="${c}"]`)?.value)||0;
+        return s + v;
+      }, 0);
+      const el = document.getElementById('gtot-'+m);
+      if (el) el.textContent = tot;
+    }
+
+    function saveGlobal() {
+      const g = KpiStore.get('global') || {};
+      for (let m = 1; m <= 12; m++) {
+        const cd = {};
+        COUNTRIES.forEach(c => {
+          cd[c] = parseInt(document.querySelector(`[data-m="${m}"][data-c="${c}"]`)?.value)||0;
+        });
+        g[m] = cd;
+      }
+      KpiStore.set('global', g);
+    }
+
     init();
     window.addEventListener('popstate', function(e) {
       setView(e.state || { view: 'main' });
