@@ -181,10 +181,10 @@ GET    /api/kpi/summary?year=2026    월별 KPI 집계 (DB 쿼리)
 ```
 v12/deploy/
 ├── app.js                  ← server.js 대체 (Express)
-├── package.json            ← express, mysql2, @aws-sdk/client-secrets-manager 추가
-├── apprunner.yaml          ← run.command: node app.js
+├── package.json            ← express, mysql2, better-sqlite3 추가
+├── apprunner.yaml          ← run.command: node app.js + secrets 섹션 추가
 ├── db/
-│   ├── connection.js       ← Secrets Manager ARN → RDS 연결
+│   ├── connection.js       ← 로컬: SQLite / 배포: RDS MySQL 자동 분기
 │   └── schema.sql          ← 테이블 생성 스크립트
 ├── routes/
 │   ├── equip.js
@@ -197,14 +197,56 @@ v12/deploy/
     └── articles.json
 ```
 
+### 로그인 (선택 사항 — 나중에)
+Azure AD SSO 연동 가능. 필요 시 ITSM에서 SR 신청 → IT팀(I&S팀)에서 Secrets Manager ARN 발급 → apprunner.yaml secrets에 추가.
+
 ---
 
 ## DB 접속 정보
 
-- **방식:** AWS Secrets Manager ARN → RDS MySQL
-- **ARN 형식:** `arn:aws:secretsmanager:ap-northeast-1:559784498787:secret:...`
+- **방식:** IT팀이 발급한 Secrets Manager ARN → `apprunner.yaml` secrets 섹션에 등록 → App Runner가 환경변수로 자동 주입
+- **connection.js에서 그냥 `process.env.DB_HOST` 읽으면 됨** (SDK 직접 호출 불필요)
 - **접속 가능 환경:** 회사 네트워크 (VPC Private) 또는 App Runner 내부
-- **로컬 개발:** DB 없이 mock 응답으로 개발 → 회사 가서 실 DB 연결 테스트
+- **로컬 개발:** SQLite로 개발 → 배포 시 RDS로 자동 전환 (환경변수 분기)
+- **IAM 인스턴스 역할:** 포털 서비스 생성 시 Secrets Manager 접근 역할 선택 필수
+
+### apprunner.yaml secrets 섹션 추가 예시
+```yaml
+version: 1.0
+runtime: nodejs22
+build:
+  commands:
+    build:
+      - npm install
+run:
+  command: node app.js
+  network:
+    port: 3000
+    env: PORT
+  secrets:
+    - name: DB_HOST
+      value-from: "arn:aws:secretsmanager:ap-northeast-1:559784498787:secret:SECRET_NAME:host::"
+    - name: DB_PORT
+      value-from: "arn:aws:secretsmanager:ap-northeast-1:559784498787:secret:SECRET_NAME:port::"
+    - name: DB_USER
+      value-from: "arn:aws:secretsmanager:ap-northeast-1:559784498787:secret:SECRET_NAME:username::"
+    - name: DB_PASSWORD
+      value-from: "arn:aws:secretsmanager:ap-northeast-1:559784498787:secret:SECRET_NAME:password::"
+    - name: DB_NAME
+      value-from: "arn:aws:secretsmanager:ap-northeast-1:559784498787:secret:SECRET_NAME:dbname::"
+```
+→ SECRET_NAME 부분은 IT팀에서 ARN 받으면 교체
+
+### connection.js 패턴
+```javascript
+// 로컬: SQLite / 배포: RDS MySQL (환경변수 분기)
+const isLocal = !process.env.DB_HOST;
+if (isLocal) {
+  // SQLite 연결
+} else {
+  // mysql2로 RDS 연결 (process.env.DB_HOST 등 사용)
+}
+```
 
 ---
 
@@ -223,13 +265,13 @@ v12/deploy/
 ## 다음 컨텍스트에서 시작할 작업 (Phase 1)
 
 1. `v12/deploy/app.js` 작성 (Express, 정적 서빙 + API 라우터)
-2. `v12/deploy/db/connection.js` 작성 (Secrets Manager ARN 기반)
+2. `v12/deploy/db/connection.js` 작성 (로컬 SQLite / 배포 RDS 자동 분기)
 3. `v12/deploy/db/schema.sql` 작성
 4. `v12/deploy/routes/equip.js` 작성
 5. `v12/deploy/routes/inwon.js` 작성
 6. `v12/deploy/routes/global.js` 작성
-7. `v12/deploy/package.json` 업데이트
-8. `v12/deploy/apprunner.yaml` run command 수정
-9. `index.html` KpiStore → fetch API 교체
+7. `v12/deploy/package.json` 업데이트 (express, mysql2, better-sqlite3)
+8. `v12/deploy/apprunner.yaml` — run command + secrets 섹션 추가 (ARN은 IT팀 수령 후 교체)
+9. `index.html` KpiStore → fetch API 교체 (localStorage 제거)
 10. GitHub push → App Runner 자동 배포
-11. 회사 네트워크에서 DB 연결 테스트
+11. 회사 네트워크에서 DB_HOST 환경변수 주입 확인 후 RDS 연결 테스트
