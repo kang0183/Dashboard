@@ -4,7 +4,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 프로젝트 개요
 
-COSMAX 생산 자동화 대시보드. 5개 공장(화성1/3/5공장, 평택1/2공장)의 자동화율, KPI 지표, 관련 기사를 추적한다. Python 스크립트가 Excel 데이터를 가공하여 JSON으로 변환하고, 단일 HTML 파일에 임베드하여 대시보드를 구성한다.
+COSMAX 생산 자동화 대시보드. 5개 공장(화성1/3/5공장, 평택1/2공장)의 자동화율, KPI 지표, 관련 기사를 추적한다.
+
+**현재 전환 진행 중:** 정적 HTML → Express + RDS 풀스택 구조. 상세 설계는 `FULLSTACK_PLAN.md` 참조.
+
+### 전환 단계 현황
+- **Phase 1 (진행 예정):** Express 전환 + 실적 입력(설비개선/인원합리화/글로벌) DB 연결
+- **Phase 2 (예정):** KPI 월별 요약 DB 자동 집계
+- **Phase 3 (최종):** 자동화율 웹 입력 전환, Excel 완전 제거
+
+### 인프라
+- **App Runner:** `arn:aws:apprunner:ap-northeast-1:559784498787:service/AI-automation-Dashboard/914648abecb44fb0a77e89e708a3dda9`
+- **도메인:** `ai-automation.cosmaxhub.com` (사내 네트워크 전용, VPC Private)
+- **DB:** RDS MySQL (Secrets Manager ARN — 회사 네트워크에서만 접속 가능)
+- **Vercel:** `https://deploy-iota-sepia.vercel.app` (개발/확인용, 외부 접근 가능)
 
 ## 아키텍처
 
