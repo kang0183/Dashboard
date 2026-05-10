@@ -2,10 +2,16 @@
   "name": "cosmax-dashboard",
   "version": "1.0.0",
   "description": "COSMAX 생산 자동화 대시보드",
+  "main": "app.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node app.js"
   },
   "engines": {
     "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "mysql2": "^3.11.5",
+    "better-sqlite3": "^11.8.1"
   }
 }

@@ -1242,7 +1242,7 @@
       <div class="imodal-ov" id="equip-modal" onclick="if(event.target===this)closeEquipModal()">
         <div class="imodal">
           <h4 id="equip-modal-title">설비 개선 항목 추가</h4>
-          <input type="hidden" id="equip-edit-idx" value="">
+          <input type="hidden" id="equip-edit-id" value="">
           <div class="frow">
             <div class="fg"><label>완료(월)</label><select id="ef-month" class="form-input">
               <option value="">선택</option>
@@ -1271,7 +1271,7 @@
       <div class="imodal-ov" id="inwon-modal" onclick="if(event.target===this)closeInwonModal()">
         <div class="imodal">
           <h4 id="inwon-modal-title">인원합리화 항목</h4>
-          <input type="hidden" id="inwon-edit-idx" value="">
+          <input type="hidden" id="inwon-edit-id" value="">
           <div class="frow">
             <div class="fg"><label>구분</label><select id="iw-type">
               <option>자동화</option><option>증설투자</option><option>기타</option>
@@ -1564,8 +1564,7 @@
         history.replaceState({ view: 'main' }, '', '');
       }
       if (key === 'input') {
-        initInputStorage();
-        renderEquipTab();
+        initInputStorage().then(() => renderEquipTab());
       }
     }
     function openAutomation() {
@@ -2337,12 +2336,12 @@
 
     // ── 실적 입력 ─────────────────────────────────────────────
     const COUNTRIES = ['한국','상해','광저우','인니','태국','미국','영페이스','네오'];
+    const _YEAR = new Date().getFullYear();
 
-    // Storage layer — swap get/set for API calls when DB is ready
-    const KpiStore = {
-      get(k)    { try { return JSON.parse(localStorage.getItem('kpi_'+k)) ?? null; } catch { return null; } },
-      set(k, v) { localStorage.setItem('kpi_'+k, JSON.stringify(v)); showSaveMsg(); },
-    };
+    // Local cache (populated by API calls)
+    let _equipItems = [];
+    let _inwonItems = [];
+    let _globalData = {};
 
     function showSaveMsg() {
       const el = document.getElementById('input-save-msg');
@@ -2351,67 +2350,49 @@
       el._t = setTimeout(() => el.textContent = '', 2000);
     }
 
-    // Init storage from kpiDetail on first load
-    function initInputStorage() {
-      if (!KpiStore.get('equip') && kpiDetail && kpiDetail.설비개선) {
-        KpiStore.set('equip', kpiDetail.설비개선.map(d => ({
-          no: d.no, month: d.month, mgr: d.담당, content: d.투자내용,
-          status: d.진행상황 || '완료', amt: d.금액 || '', note: ''
-        })));
-      }
-      if (!KpiStore.get('inwon') && kpiDetail && kpiDetail.인원합리화) {
-        KpiStore.set('inwon', kpiDetail.인원합리화.map(d => ({
-          no: d.no, type: d.구분, category: d.유형, mgr: d.담당자,
-          name: d.투자명, equip: d.설비명, headcount: d.인원,
-          monthly: Object.fromEntries(
-            Object.entries(d.월별효과 || {}).map(([m, v]) => [m, { eff: v, opr: '' }])
-          ),
-          isNew: false
-        })));
-      }
-      if (!KpiStore.get('global') && kpiDetail && kpiDetail.글로벌) {
-        const g = {};
-        for (const [m, cd] of Object.entries(kpiDetail.글로벌)) {
-          g[m] = typeof cd === 'object' ? cd : Object.fromEntries(COUNTRIES.map(c => [c, 0]));
-        }
-        for (let m = 1; m <= 12; m++) {
-          if (!g[m]) g[m] = Object.fromEntries(COUNTRIES.map(c => [c, 0]));
-        }
-        KpiStore.set('global', g);
-      }
-      if (!KpiStore.get('global')) {
-        const g = {};
-        for (let m = 1; m <= 12; m++) g[m] = Object.fromEntries(COUNTRIES.map(c => [c, 0]));
-        KpiStore.set('global', g);
-      }
+    async function _loadEquip() {
+      const res = await fetch(`/api/equip?year=${_YEAR}`);
+      _equipItems = await res.json();
+    }
+    async function _loadInwon() {
+      const res = await fetch('/api/inwon');
+      _inwonItems = await res.json();
+    }
+    async function _loadGlobal() {
+      const res = await fetch(`/api/global?year=${_YEAR}`);
+      _globalData = await res.json();
     }
 
-    function switchInputTab(tab, btn) {
+    async function initInputStorage() {
+      await Promise.all([_loadEquip(), _loadInwon(), _loadGlobal()]);
+    }
+
+    async function switchInputTab(tab, btn) {
       document.querySelectorAll('.input-tab').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       ['equip','inwon','global'].forEach(t => {
         document.getElementById('itab-'+t).classList.toggle('hidden', t !== tab);
       });
-      if (tab === 'equip') renderEquipTab();
-      if (tab === 'inwon') renderInwonTab();
-      if (tab === 'global') renderGlobalTab();
+      if (tab === 'equip') { await _loadEquip(); renderEquipTab(); }
+      if (tab === 'inwon') { await _loadInwon(); renderInwonTab(); }
+      if (tab === 'global') { await _loadGlobal(); renderGlobalTab(); }
     }
 
     // ── 설비개선 탭 ──────────────────────────────────────────
     function renderEquipTab() {
-      const items = KpiStore.get('equip') || [];
+      const items = _equipItems;
       const rows = items.map((d, i) => `
         <tr>
-          <td style="color:var(--muted);font-size:11px">${d.no || i+1}</td>
+          <td style="color:var(--muted);font-size:11px">${i+1}</td>
           <td>${d.month ? d.month+'월' : '-'}</td>
           <td>${d.mgr || ''}</td>
           <td style="max-width:220px">${d.content || ''}</td>
           <td><span style="padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;background:${d.status==='완료'?'#d1fae5':'#fef3c7'};color:${d.status==='완료'?'#065f46':'#92400e'}">${d.status||''}</span></td>
-          <td style="text-align:right">${d.amt !== '' && d.amt != null ? d.amt+'M' : '-'}</td>
+          <td style="text-align:right">${d.amt != null ? d.amt+'M' : '-'}</td>
           <td style="max-width:120px;color:var(--muted);font-size:11px">${d.note || ''}</td>
           <td style="white-space:nowrap">
-            <button class="ibtn ibtn-g" style="margin-right:4px" onclick="openEquipEdit(${i})">수정</button>
-            <button class="ibtn ibtn-d" onclick="deleteEquipItem(${i})">삭제</button>
+            <button class="ibtn ibtn-g" style="margin-right:4px" onclick="openEquipEdit(${d.id})">수정</button>
+            <button class="ibtn ibtn-d" onclick="deleteEquipItem(${d.id})">삭제</button>
           </td>
         </tr>`).join('');
       document.getElementById('itab-equip').innerHTML = `
@@ -2428,7 +2409,7 @@
 
     function openEquipAdd() {
       document.getElementById('equip-modal-title').textContent = '설비 개선 항목 추가';
-      document.getElementById('equip-edit-idx').value = '';
+      document.getElementById('equip-edit-id').value = '';
       ['ef-month','ef-status','ef-mgr','ef-amt','ef-content','ef-note'].forEach(id => {
         const el = document.getElementById(id);
         if (el.tagName === 'SELECT') el.selectedIndex = 0;
@@ -2438,15 +2419,15 @@
       document.getElementById('equip-modal').classList.add('open');
     }
 
-    function openEquipEdit(i) {
-      const d = (KpiStore.get('equip') || [])[i];
+    function openEquipEdit(id) {
+      const d = _equipItems.find(x => x.id === id);
       if (!d) return;
       document.getElementById('equip-modal-title').textContent = '설비 개선 항목 수정';
-      document.getElementById('equip-edit-idx').value = i;
+      document.getElementById('equip-edit-id').value = id;
       document.getElementById('ef-month').value = d.month || '';
       document.getElementById('ef-status').value = d.status || '완료';
       document.getElementById('ef-mgr').value = d.mgr || '';
-      document.getElementById('ef-amt').value = d.amt !== '' ? d.amt : '';
+      document.getElementById('ef-amt').value = d.amt != null ? d.amt : '';
       document.getElementById('ef-content').value = d.content || '';
       document.getElementById('ef-note').value = d.note || '';
       document.getElementById('equip-modal').classList.add('open');
@@ -2454,48 +2435,47 @@
 
     function closeEquipModal() { document.getElementById('equip-modal').classList.remove('open'); }
 
-    function saveEquipItem() {
-      const items = KpiStore.get('equip') || [];
-      const idx = document.getElementById('equip-edit-idx').value;
+    async function saveEquipItem() {
+      const id = document.getElementById('equip-edit-id').value;
       const item = {
-        no: idx !== '' ? (items[+idx]?.no || +idx+1) : items.length + 1,
+        year: _YEAR,
         month: parseInt(document.getElementById('ef-month').value) || null,
         mgr: document.getElementById('ef-mgr').value.trim(),
         content: document.getElementById('ef-content').value.trim(),
         status: document.getElementById('ef-status').value,
-        amt: document.getElementById('ef-amt').value !== '' ? parseFloat(document.getElementById('ef-amt').value) : '',
+        amt: document.getElementById('ef-amt').value !== '' ? parseFloat(document.getElementById('ef-amt').value) : null,
         note: document.getElementById('ef-note').value.trim(),
       };
-      if (idx !== '') items[+idx] = item;
-      else items.push(item);
-      KpiStore.set('equip', items);
+      const url = id ? `/api/equip/${id}` : '/api/equip';
+      await fetch(url, { method: id ? 'PUT' : 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(item) });
+      await _loadEquip();
       closeEquipModal();
       renderEquipTab();
+      showSaveMsg();
     }
 
-    function deleteEquipItem(i) {
+    async function deleteEquipItem(id) {
       if (!confirm('삭제하시겠습니까?')) return;
-      const items = KpiStore.get('equip') || [];
-      items.splice(i, 1);
-      KpiStore.set('equip', items);
+      await fetch(`/api/equip/${id}`, { method: 'DELETE' });
+      await _loadEquip();
       renderEquipTab();
     }
 
     // ── 인원합리화 탭 ─────────────────────────────────────────
     function renderInwonTab() {
-      const items = KpiStore.get('inwon') || [];
+      const items = _inwonItems;
       const rows = items.map((d, i) => `
         <tr>
-          <td style="color:var(--muted);font-size:11px">${d.no || i+1}${d.isNew ? ' <span class="chip-new">신규</span>' : ''}</td>
+          <td style="color:var(--muted);font-size:11px">${i+1}${d.isNew ? ' <span class="chip-new">신규</span>' : ''}</td>
           <td>${d.type||''}</td><td>${d.category||''}</td><td>${d.mgr||''}</td>
           <td style="max-width:180px">${d.name||''}</td>
           <td>${d.equip||''}</td>
           <td style="text-align:center">${d.headcount||0}명</td>
           <td style="color:var(--muted);font-size:11px">${Object.keys(d.monthly||{}).filter(m=>d.monthly[m]?.eff).map(m=>m+'월').join(', ')||'-'}</td>
           <td style="white-space:nowrap">
-            <button class="ibtn ibtn-s" style="margin-right:4px" onclick="openInwonMonthly(${i})">월별 입력</button>
-            <button class="ibtn ibtn-g" style="margin-right:4px" onclick="openInwonEdit(${i})">수정</button>
-            <button class="ibtn ibtn-d" onclick="deleteInwonItem(${i})">삭제</button>
+            <button class="ibtn ibtn-s" style="margin-right:4px" onclick="openInwonMonthly(${d.id})">월별 입력</button>
+            <button class="ibtn ibtn-g" style="margin-right:4px" onclick="openInwonEdit(${d.id})">수정</button>
+            <button class="ibtn ibtn-d" onclick="deleteInwonItem(${d.id})">삭제</button>
           </td>
         </tr>`).join('');
       document.getElementById('itab-inwon').innerHTML = `
@@ -2512,7 +2492,7 @@
 
     function openInwonAdd() {
       document.getElementById('inwon-modal-title').textContent = '신규 투자 추가';
-      document.getElementById('inwon-edit-idx').value = '';
+      document.getElementById('inwon-edit-id').value = '';
       ['iw-type','iw-category','iw-mgr','iw-headcount','iw-name','iw-equip'].forEach(id => {
         const el = document.getElementById(id);
         if (el.tagName === 'SELECT') el.selectedIndex = 0;
@@ -2521,11 +2501,11 @@
       document.getElementById('inwon-modal').classList.add('open');
     }
 
-    function openInwonEdit(i) {
-      const d = (KpiStore.get('inwon') || [])[i];
+    function openInwonEdit(id) {
+      const d = _inwonItems.find(x => x.id === id);
       if (!d) return;
       document.getElementById('inwon-modal-title').textContent = '항목 수정';
-      document.getElementById('inwon-edit-idx').value = i;
+      document.getElementById('inwon-edit-id').value = id;
       document.getElementById('iw-type').value = d.type || '자동화';
       document.getElementById('iw-category').value = d.category || '';
       document.getElementById('iw-mgr').value = d.mgr || '';
@@ -2537,44 +2517,39 @@
 
     function closeInwonModal() { document.getElementById('inwon-modal').classList.remove('open'); }
 
-    function saveInwonItem() {
-      const items = KpiStore.get('inwon') || [];
-      const idx = document.getElementById('inwon-edit-idx').value;
-      const isNew = idx === '';
-      const base = isNew ? {} : items[+idx];
+    async function saveInwonItem() {
+      const id = document.getElementById('inwon-edit-id').value;
       const item = {
-        ...base,
-        no: isNew ? items.length + 1 : base.no,
+        year: _YEAR,
         type: document.getElementById('iw-type').value,
         category: document.getElementById('iw-category').value.trim(),
         mgr: document.getElementById('iw-mgr').value.trim(),
         headcount: parseInt(document.getElementById('iw-headcount').value) || 0,
         name: document.getElementById('iw-name').value.trim(),
         equip: document.getElementById('iw-equip').value.trim(),
-        monthly: base.monthly || {},
-        isNew: isNew,
+        isNew: !id,
       };
-      if (!isNew) items[+idx] = item;
-      else items.push(item);
-      KpiStore.set('inwon', items);
+      const url = id ? `/api/inwon/${id}` : '/api/inwon';
+      await fetch(url, { method: id ? 'PUT' : 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(item) });
+      await _loadInwon();
       closeInwonModal();
       renderInwonTab();
+      showSaveMsg();
     }
 
-    function deleteInwonItem(i) {
+    async function deleteInwonItem(id) {
       if (!confirm('삭제하시겠습니까?')) return;
-      const items = KpiStore.get('inwon') || [];
-      items.splice(i, 1);
-      KpiStore.set('inwon', items);
+      await fetch(`/api/inwon/${id}`, { method: 'DELETE' });
+      await _loadInwon();
       renderInwonTab();
     }
 
-    let _inwonMonthlyIdx = -1;
-    function openInwonMonthly(i) {
-      _inwonMonthlyIdx = i;
-      const d = (KpiStore.get('inwon') || [])[i];
+    let _inwonMonthlyId = null;
+    function openInwonMonthly(id) {
+      _inwonMonthlyId = id;
+      const d = _inwonItems.find(x => x.id === id);
       if (!d) return;
-      document.getElementById('inwon-monthly-title').textContent = `월별 실적 입력 — ${d.name || '항목 '+i}`;
+      document.getElementById('inwon-monthly-title').textContent = `월별 실적 입력 — ${d.name || '항목'}`;
       renderInwonMonthlyBody(d.monthly || {});
       document.getElementById('inwon-monthly-modal').classList.add('open');
     }
@@ -2585,7 +2560,7 @@
       const rows = months.map(m => `
         <tr>
           <td style="padding:4px 8px;font-weight:600;color:var(--muted);white-space:nowrap">${m}월</td>
-          <td style="padding:4px 8px"><input class="gi" style="border:1px solid var(--border);background:#fff;border-radius:4px;width:80px" 
+          <td style="padding:4px 8px"><input class="gi" style="border:1px solid var(--border);background:#fff;border-radius:4px;width:80px"
             data-m="${m}" data-f="eff" type="number" step="0.01" value="${monthly[m]?.eff||''}" placeholder="효과"></td>
           <td style="padding:4px 8px"><input class="gi" style="border:1px solid var(--border);background:#fff;border-radius:4px;width:70px"
             data-m="${m}" data-f="opr" type="number" step="0.01" min="0" max="1" value="${monthly[m]?.opr||''}" placeholder="가동율"></td>
@@ -2618,10 +2593,7 @@
       if (row) row.remove();
     }
 
-    function saveInwonMonthly() {
-      const items = KpiStore.get('inwon') || [];
-      const d = items[_inwonMonthlyIdx];
-      if (!d) return;
+    async function saveInwonMonthly() {
       const monthly = {};
       document.querySelectorAll('#inwon-month-rows tr').forEach(tr => {
         const m = parseInt(tr.querySelector('[data-m]').dataset.m);
@@ -2629,18 +2601,22 @@
         const opr = tr.querySelector('[data-f="opr"]').value;
         if (eff !== '' || opr !== '') monthly[m] = { eff: eff !== '' ? parseFloat(eff) : '', opr: opr !== '' ? parseFloat(opr) : '' };
       });
-      d.monthly = monthly;
-      items[_inwonMonthlyIdx] = d;
-      KpiStore.set('inwon', items);
+      await fetch(`/api/inwon/${_inwonMonthlyId}/monthly`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ year: _YEAR, monthly }),
+      });
+      await _loadInwon();
       closeInwonMonthly();
       renderInwonTab();
+      showSaveMsg();
     }
 
     function closeInwonMonthly() { document.getElementById('inwon-monthly-modal').classList.remove('open'); }
 
     // ── 글로벌 탭 ────────────────────────────────────────────
     function renderGlobalTab() {
-      const g = KpiStore.get('global') || {};
+      const g = _globalData || {};
       const header = `<tr><th>월</th>${COUNTRIES.map(c=>`<th>${c}</th>`).join('')}<th>합계</th></tr>`;
       const rows = Array.from({length:12},(_,i)=>i+1).map(m => {
         const cd = g[m] || {};
@@ -2669,16 +2645,21 @@
       if (el) el.textContent = tot;
     }
 
-    function saveGlobal() {
-      const g = KpiStore.get('global') || {};
+    async function saveGlobal() {
+      const data = {};
       for (let m = 1; m <= 12; m++) {
         const cd = {};
         COUNTRIES.forEach(c => {
           cd[c] = parseInt(document.querySelector(`[data-m="${m}"][data-c="${c}"]`)?.value)||0;
         });
-        g[m] = cd;
+        data[m] = cd;
       }
-      KpiStore.set('global', g);
+      await fetch('/api/global', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ year: _YEAR, data }),
+      });
+      showSaveMsg();
     }
 
     init();
