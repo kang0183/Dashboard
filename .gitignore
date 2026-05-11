@@ -5,6 +5,7 @@
 !PLANNER_CHAT_LOG.md
 !CLAUDE.md
 !FULLSTACK_PLAN.md
+!MONTHLY_UPDATE.md
 
 # GitHub Actions
 !.github/
@@ -32,3 +33,4 @@
 !v12/deploy/routes/global.js
 !v12/APPRUNNER_MIGRATION.md
 !v12/FULLSTACK_PLAN.md
+!v12/update_monthly.py
