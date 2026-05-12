@@ -1225,7 +1225,10 @@
         <div class="panel full">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
             <h3 style="margin:0;">실적 입력</h3>
-            <span id="input-save-msg" style="font-size:12px;color:#059669;"></span>
+            <span style="display:flex;align-items:center;gap:8px">
+              <span id="input-mode-badge" style="display:none;padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;background:#fef3c7;color:#92400e">로컬 저장소 모드</span>
+              <span id="input-save-msg" style="font-size:12px;color:#059669;"></span>
+            </span>
           </div>
           <div class="input-tabs">
             <button class="input-tab active" onclick="switchInputTab('equip',this)">설비 개선</button>
@@ -2342,6 +2345,7 @@
     let _equipItems = [];
     let _inwonItems = [];
     let _globalData = {};
+    let _apiAvailable = false;
 
     function showSaveMsg() {
       const el = document.getElementById('input-save-msg');
@@ -2350,48 +2354,62 @@
       el._t = setTimeout(() => el.textContent = '', 2000);
     }
 
-    let _apiAvailable = true;
+    // localStorage 헬퍼 (API 미사용 환경 폴백)
+    const _LS = k => `kpi_${_YEAR}_${k}`;
+    function _lsGet(k) { try { return JSON.parse(localStorage.getItem(_LS(k))); } catch { return null; } }
+    function _lsSet(k, v) { localStorage.setItem(_LS(k), JSON.stringify(v)); }
+    function _lsNextId(arr) { return arr.length ? Math.max(...arr.map(x => x.id || 0)) + 1 : 1; }
+
+    function _showLocalBadge() {
+      const b = document.getElementById('input-mode-badge');
+      if (b) b.style.display = 'inline-block';
+    }
 
     async function _apiFetch(url) {
       const res = await fetch(url);
       if (!res.ok) throw new Error(`API ${res.status}`);
       const ct = res.headers.get('content-type') || '';
-      if (!ct.includes('json')) throw new Error('API not available');
+      if (!ct.includes('json')) throw new Error('not json');
       return res.json();
     }
 
     async function _loadEquip() {
-      _equipItems = await _apiFetch(`/api/equip?year=${_YEAR}`);
+      if (_apiAvailable) {
+        _equipItems = await _apiFetch(`/api/equip?year=${_YEAR}`);
+      } else {
+        _equipItems = _lsGet('equip') || [];
+      }
     }
     async function _loadInwon() {
-      _inwonItems = await _apiFetch('/api/inwon');
+      if (_apiAvailable) {
+        _inwonItems = await _apiFetch('/api/inwon');
+      } else {
+        _inwonItems = _lsGet('inwon') || [];
+      }
     }
     async function _loadGlobal() {
-      _globalData = await _apiFetch(`/api/global?year=${_YEAR}`);
-    }
-
-    function _showApiError() {
-      const msg = `<div style="padding:32px;text-align:center;color:var(--muted);">
-        <div style="font-size:32px;margin-bottom:12px">🔌</div>
-        <div style="font-weight:600;margin-bottom:8px;color:var(--text)">서버 연결 필요</div>
-        <div style="font-size:13px;line-height:1.6">실적 입력 기능은 사내망(App Runner)에서 사용 가능합니다.<br>
-        <b>ai-automation.cosmaxhub.com</b> 으로 접속하세요.</div>
-      </div>`;
-      ['itab-equip','itab-inwon','itab-global'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.innerHTML = msg;
-        if (el) el.classList.remove('hidden');
-      });
+      if (_apiAvailable) {
+        _globalData = await _apiFetch(`/api/global?year=${_YEAR}`);
+      } else {
+        _globalData = _lsGet('global') || {};
+      }
     }
 
     async function initInputStorage() {
       try {
-        await Promise.all([_loadEquip(), _loadInwon(), _loadGlobal()]);
+        const [eq, iw, gl] = await Promise.all([
+          _apiFetch(`/api/equip?year=${_YEAR}`),
+          _apiFetch('/api/inwon'),
+          _apiFetch(`/api/global?year=${_YEAR}`),
+        ]);
+        _equipItems = eq; _inwonItems = iw; _globalData = gl;
         _apiAvailable = true;
       } catch (e) {
         _apiAvailable = false;
-        _showApiError();
-        throw e;
+        _equipItems = _lsGet('equip') || [];
+        _inwonItems = _lsGet('inwon') || [];
+        _globalData  = _lsGet('global') || {};
+        _showLocalBadge();
       }
     }
 
@@ -2474,18 +2492,28 @@
         amt: document.getElementById('ef-amt').value !== '' ? parseFloat(document.getElementById('ef-amt').value) : null,
         note: document.getElementById('ef-note').value.trim(),
       };
-      const url = id ? `/api/equip/${id}` : '/api/equip';
-      await fetch(url, { method: id ? 'PUT' : 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(item) });
-      await _loadEquip();
-      closeEquipModal();
-      renderEquipTab();
-      showSaveMsg();
+      if (_apiAvailable) {
+        const url = id ? `/api/equip/${id}` : '/api/equip';
+        await fetch(url, { method: id ? 'PUT' : 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(item) });
+        await _loadEquip();
+      } else {
+        const arr = _lsGet('equip') || [];
+        if (id) { const i = arr.findIndex(x => x.id == id); if (i >= 0) arr[i] = { ...arr[i], ...item }; }
+        else arr.push({ id: _lsNextId(arr), ...item });
+        _lsSet('equip', arr); _equipItems = arr;
+      }
+      closeEquipModal(); renderEquipTab(); showSaveMsg();
     }
 
     async function deleteEquipItem(id) {
       if (!confirm('삭제하시겠습니까?')) return;
-      await fetch(`/api/equip/${id}`, { method: 'DELETE' });
-      await _loadEquip();
+      if (_apiAvailable) {
+        await fetch(`/api/equip/${id}`, { method: 'DELETE' });
+        await _loadEquip();
+      } else {
+        const arr = (_lsGet('equip') || []).filter(x => x.id != id);
+        _lsSet('equip', arr); _equipItems = arr;
+      }
       renderEquipTab();
     }
 
@@ -2557,18 +2585,28 @@
         equip: document.getElementById('iw-equip').value.trim(),
         isNew: !id,
       };
-      const url = id ? `/api/inwon/${id}` : '/api/inwon';
-      await fetch(url, { method: id ? 'PUT' : 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(item) });
-      await _loadInwon();
-      closeInwonModal();
-      renderInwonTab();
-      showSaveMsg();
+      if (_apiAvailable) {
+        const url = id ? `/api/inwon/${id}` : '/api/inwon';
+        await fetch(url, { method: id ? 'PUT' : 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(item) });
+        await _loadInwon();
+      } else {
+        const arr = _lsGet('inwon') || [];
+        if (id) { const i = arr.findIndex(x => x.id == id); if (i >= 0) arr[i] = { ...arr[i], ...item }; }
+        else arr.push({ id: _lsNextId(arr), monthly: {}, ...item });
+        _lsSet('inwon', arr); _inwonItems = arr;
+      }
+      closeInwonModal(); renderInwonTab(); showSaveMsg();
     }
 
     async function deleteInwonItem(id) {
       if (!confirm('삭제하시겠습니까?')) return;
-      await fetch(`/api/inwon/${id}`, { method: 'DELETE' });
-      await _loadInwon();
+      if (_apiAvailable) {
+        await fetch(`/api/inwon/${id}`, { method: 'DELETE' });
+        await _loadInwon();
+      } else {
+        const arr = (_lsGet('inwon') || []).filter(x => x.id != id);
+        _lsSet('inwon', arr); _inwonItems = arr;
+      }
       renderInwonTab();
     }
 
@@ -2629,15 +2667,20 @@
         const opr = tr.querySelector('[data-f="opr"]').value;
         if (eff !== '' || opr !== '') monthly[m] = { eff: eff !== '' ? parseFloat(eff) : '', opr: opr !== '' ? parseFloat(opr) : '' };
       });
-      await fetch(`/api/inwon/${_inwonMonthlyId}/monthly`, {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ year: _YEAR, monthly }),
-      });
-      await _loadInwon();
-      closeInwonMonthly();
-      renderInwonTab();
-      showSaveMsg();
+      if (_apiAvailable) {
+        await fetch(`/api/inwon/${_inwonMonthlyId}/monthly`, {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ year: _YEAR, monthly }),
+        });
+        await _loadInwon();
+      } else {
+        const arr = _lsGet('inwon') || [];
+        const i = arr.findIndex(x => x.id == _inwonMonthlyId);
+        if (i >= 0) arr[i].monthly = monthly;
+        _lsSet('inwon', arr); _inwonItems = arr;
+      }
+      closeInwonMonthly(); renderInwonTab(); showSaveMsg();
     }
 
     function closeInwonMonthly() { document.getElementById('inwon-monthly-modal').classList.remove('open'); }
@@ -2674,19 +2717,23 @@
     }
 
     async function saveGlobal() {
-      const data = {};
+      const gdata = {};
       for (let m = 1; m <= 12; m++) {
         const cd = {};
         COUNTRIES.forEach(c => {
           cd[c] = parseInt(document.querySelector(`[data-m="${m}"][data-c="${c}"]`)?.value)||0;
         });
-        data[m] = cd;
+        gdata[m] = cd;
       }
-      await fetch('/api/global', {
-        method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ year: _YEAR, data }),
-      });
+      if (_apiAvailable) {
+        await fetch('/api/global', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({ year: _YEAR, data: gdata }),
+        });
+      } else {
+        _lsSet('global', gdata); _globalData = gdata;
+      }
       showSaveMsg();
     }
 
