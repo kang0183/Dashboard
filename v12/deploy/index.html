@@ -1258,7 +1258,11 @@
             </select></div>
           </div>
           <div class="frow">
-            <div class="fg"><label>담당자</label><input id="ef-mgr" placeholder="담당자"></div>
+            <div class="fg"><label>담당자</label><select id="ef-mgr">
+              <option value="">선택</option>
+              <option>표인필</option><option>박진욱</option><option>엄태일</option>
+              <option>김재훈</option><option>심규철</option><option>강정우</option>
+            </select></div>
             <div class="fg"><label>투자 금액 (백만원)</label><input id="ef-amt" type="number" step="0.1" placeholder="0.0"></div>
           </div>
           <div class="fg"><label>투자 내용</label><input id="ef-content" placeholder="투자 내용"></div>
@@ -1279,10 +1283,30 @@
             <div class="fg"><label>구분</label><select id="iw-type">
               <option>자동화</option><option>증설투자</option><option>기타</option>
             </select></div>
-            <div class="fg"><label>유형</label><input id="iw-category" placeholder="파우더, 립글로즈 등"></div>
+            <div class="fg"><label>위치</label><select id="iw-location">
+              <option value="">선택</option>
+              <option>화성1</option><option>화성3</option><option>화성5</option>
+              <option>평택1</option><option>평택2</option>
+            </select></div>
           </div>
           <div class="frow">
-            <div class="fg"><label>담당자</label><input id="iw-mgr" placeholder="담당자"></div>
+            <div class="fg">
+              <label>유형</label>
+              <select id="iw-category-sel" onchange="toggleCategoryInput(this.value)">
+                <option value="">선택</option>
+                <option>기초</option><option>튜브</option><option>립글로즈</option>
+                <option>스틱밤</option><option>에어쿠션</option><option>파우더</option>
+                <option>하이드로겔</option><option value="__direct__">직접입력</option>
+              </select>
+              <input id="iw-category" placeholder="유형 직접 입력" style="margin-top:4px;display:none">
+            </div>
+            <div class="fg"><label>담당자</label><select id="iw-mgr">
+              <option value="">선택</option>
+              <option>표인필</option><option>박진욱</option><option>엄태일</option>
+              <option>김재훈</option><option>심규철</option><option>강정우</option>
+            </select></div>
+          </div>
+          <div class="frow">
             <div class="fg"><label>인원합리화 인원 (명)</label><input id="iw-headcount" type="number" placeholder="0"></div>
           </div>
           <div class="fg"><label>투자명</label><input id="iw-name" placeholder="투자 프로젝트명"></div>
@@ -2523,7 +2547,7 @@
       const rows = items.map((d, i) => `
         <tr>
           <td style="color:var(--muted);font-size:11px">${i+1}${d.isNew ? ' <span class="chip-new">신규</span>' : ''}</td>
-          <td>${d.type||''}</td><td>${d.category||''}</td><td>${d.mgr||''}</td>
+          <td>${d.type||''}</td><td>${d.location||''}</td><td>${d.category||''}</td><td>${d.mgr||''}</td>
           <td style="max-width:180px">${d.name||''}</td>
           <td>${d.equip||''}</td>
           <td style="text-align:center">${d.headcount||0}명</td>
@@ -2541,19 +2565,26 @@
         </div>
         <div style="overflow-x:auto">
         <table class="input-tbl">
-          <thead><tr><th>No</th><th>구분</th><th>유형</th><th>담당자</th><th>투자명</th><th>설비명</th><th>인원</th><th>입력된 월</th><th></th></tr></thead>
-          <tbody>${rows || '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px">항목이 없습니다.</td></tr>'}</tbody>
+          <thead><tr><th>No</th><th>구분</th><th>위치</th><th>유형</th><th>담당자</th><th>투자명</th><th>설비명</th><th>인원</th><th>입력된 월</th><th></th></tr></thead>
+          <tbody>${rows || '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:20px">항목이 없습니다.</td></tr>'}</tbody>
         </table></div>`;
+    }
+
+    function toggleCategoryInput(val) {
+      const inp = document.getElementById('iw-category');
+      inp.style.display = val === '__direct__' ? '' : 'none';
+      if (val !== '__direct__') inp.value = '';
     }
 
     function openInwonAdd() {
       document.getElementById('inwon-modal-title').textContent = '신규 투자 추가';
       document.getElementById('inwon-edit-id').value = '';
-      ['iw-type','iw-category','iw-mgr','iw-headcount','iw-name','iw-equip'].forEach(id => {
+      ['iw-type','iw-location','iw-category-sel','iw-mgr','iw-headcount','iw-name','iw-equip'].forEach(id => {
         const el = document.getElementById(id);
-        if (el.tagName === 'SELECT') el.selectedIndex = 0;
-        else el.value = '';
+        if (el) { if (el.tagName === 'SELECT') el.selectedIndex = 0; else el.value = ''; }
       });
+      document.getElementById('iw-category').value = '';
+      document.getElementById('iw-category').style.display = 'none';
       document.getElementById('inwon-modal').classList.add('open');
     }
 
@@ -2563,7 +2594,17 @@
       document.getElementById('inwon-modal-title').textContent = '항목 수정';
       document.getElementById('inwon-edit-id').value = id;
       document.getElementById('iw-type').value = d.type || '자동화';
-      document.getElementById('iw-category').value = d.category || '';
+      document.getElementById('iw-location').value = d.location || '';
+      const presets = ['기초','튜브','립글로즈','스틱밤','에어쿠션','파우더','하이드로겔'];
+      const catSel = document.getElementById('iw-category-sel');
+      const catInp = document.getElementById('iw-category');
+      if (presets.includes(d.category)) {
+        catSel.value = d.category; catInp.style.display = 'none'; catInp.value = '';
+      } else if (d.category) {
+        catSel.value = '__direct__'; catInp.style.display = ''; catInp.value = d.category;
+      } else {
+        catSel.selectedIndex = 0; catInp.style.display = 'none'; catInp.value = '';
+      }
       document.getElementById('iw-mgr').value = d.mgr || '';
       document.getElementById('iw-headcount').value = d.headcount || '';
       document.getElementById('iw-name').value = d.name || '';
@@ -2575,11 +2616,14 @@
 
     async function saveInwonItem() {
       const id = document.getElementById('inwon-edit-id').value;
+      const catSel = document.getElementById('iw-category-sel').value;
+      const category = catSel === '__direct__' ? document.getElementById('iw-category').value.trim() : catSel;
       const item = {
         year: _YEAR,
         type: document.getElementById('iw-type').value,
-        category: document.getElementById('iw-category').value.trim(),
-        mgr: document.getElementById('iw-mgr').value.trim(),
+        location: document.getElementById('iw-location').value,
+        category,
+        mgr: document.getElementById('iw-mgr').value,
         headcount: parseInt(document.getElementById('iw-headcount').value) || 0,
         name: document.getElementById('iw-name').value.trim(),
         equip: document.getElementById('iw-equip').value.trim(),
