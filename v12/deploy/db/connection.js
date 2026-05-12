@@ -21,6 +21,7 @@ const SQLITE_DDL = `
     year INTEGER NOT NULL DEFAULT 2026,
     no INTEGER,
     type TEXT,
+    location TEXT,
     category TEXT,
     name TEXT NOT NULL DEFAULT '',
     equip TEXT,
@@ -74,6 +75,9 @@ function getSqlite() {
     _sqlite.pragma('journal_mode = WAL');
     _sqlite.pragma('foreign_keys = ON');
     _sqlite.exec(SQLITE_DDL);
+    // migrations for columns added after initial schema
+    try { _sqlite.exec("ALTER TABLE inwon ADD COLUMN location TEXT"); } catch (_) {}
+    try { _sqlite.exec("ALTER TABLE equip ADD COLUMN location TEXT"); } catch (_) {}
   }
   return _sqlite;
 }

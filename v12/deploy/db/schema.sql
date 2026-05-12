@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS inwon (
   year        INT NOT NULL DEFAULT 2026,
   no          INT,
   type        VARCHAR(20),
+  location    VARCHAR(20),
   category    VARCHAR(50),
   name        VARCHAR(200) NOT NULL DEFAULT '',
   equip       VARCHAR(100),
