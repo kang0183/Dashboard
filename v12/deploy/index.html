@@ -954,9 +954,10 @@
     .report-stat-value.up { color:#059669; }
     .report-stat-value.down { color:#dc2626; }
     .report-detail-title { font-size:10px; font-weight:600; color:#6b7280; margin:8px 0 5px; text-transform:uppercase; letter-spacing:0.05em; }
-    .report-table { width:100%; border-collapse:collapse; font-size:11px; }
-    .report-table th { background:#f3f4f6; padding:4px 6px; text-align:left; color:#6b7280; font-weight:600; border-bottom:1px solid #e5e7eb; }
-    .report-table td { padding:4px 6px; border-bottom:1px solid #f3f4f6; color:#374151; }
+    .report-table { width:100%; border-collapse:collapse; font-size:11px; table-layout:fixed; }
+    .report-table th { background:#f3f4f6; padding:5px 6px; text-align:left; color:#6b7280; font-weight:600; border-bottom:1px solid #e5e7eb; white-space:nowrap; }
+    .report-table td { padding:5px 6px; border-bottom:1px solid #f3f4f6; color:#374151; word-break:keep-all; overflow-wrap:break-word; }
+    .report-table td.nowrap { white-space:nowrap; }
     .report-table tr:last-child td { border-bottom:none; }
     @media print {
       body > *:not(.report-modal-overlay) { display:none !important; }
@@ -2920,7 +2921,7 @@
         }
       }
       const changeRows = changed.slice(0, 12).map(c =>
-        `<tr><td style="color:#6b7280;font-size:10px">${c.fac}</td><td>${c.line}</td><td style="color:#059669;font-size:10px">${c.procs.map(p=>p.process).join(', ')}</td></tr>`
+        `<tr><td class="nowrap" style="color:#6b7280;font-size:10px;width:56px">${c.fac.replace('공장','')+'공장'}</td><td style="width:110px">${c.line}</td><td style="color:#059669;font-size:10px">${c.procs.map(p=>p.process).join(', ')}</td></tr>`
       ).join('') || '<tr><td colspan="3" style="text-align:center;color:#9ca3af">-</td></tr>';
 
       sec.innerHTML = `
@@ -2932,7 +2933,7 @@
             <div class="report-stat"><div class="report-stat-label">연초 대비</div>${ytdD != null ? deltaStr(ytdD, '%p') : '<span class="report-stat-value">-</span>'}</div>
           </div>
           <div class="report-detail-title">수동 → 자동 전환 공정</div>
-          <table class="report-table"><thead><tr><th>공장</th><th>라인</th><th>전환 공정</th></tr></thead><tbody>${changeRows}</tbody></table>
+          <table class="report-table"><colgroup><col style="width:56px"><col style="width:110px"><col></colgroup><thead><tr><th>공장</th><th>라인</th><th>전환 공정</th></tr></thead><tbody>${changeRows}</tbody></table>
         </div>`;
       return sec;
     }
@@ -2948,9 +2949,10 @@
         .filter(d => d.월별효과 && d.월별효과[m])
         .sort((a,b) => (b.월별효과[m]||0)-(a.월별효과[m]||0))
         .slice(0, 8);
-      const rows = items.map(d =>
-        `<tr><td>${d.투자명.substring(0,22)}</td><td>${d.담당자}</td><td style="text-align:right;font-weight:600">${d.월별효과[m].toFixed(1)}</td><td style="text-align:right;color:#6b7280">${d.인원||'-'}명</td></tr>`
-      ).join('') || '<tr><td colspan="4" style="text-align:center;color:#9ca3af">데이터 없음</td></tr>';
+      const rows = items.map(d => {
+        const name = d.투자명.length > 20 ? d.투자명.substring(0,20)+'…' : d.투자명;
+        return `<tr><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${name}</td><td class="nowrap" style="width:36px">${d.담당자}</td><td class="nowrap" style="text-align:right;font-weight:600;width:44px">${d.월별효과[m].toFixed(1)}</td><td class="nowrap" style="text-align:right;color:#6b7280;width:34px">${d.인원||'-'}명</td></tr>`;
+      }).join('') || '<tr><td colspan="4" style="text-align:center;color:#9ca3af">데이터 없음</td></tr>';
       sec.innerHTML = `
         <div class="report-section-head"><span>인원 합리화</span><span style="color:#1e40af;font-size:17px">${cur.toFixed(0)}백만원</span></div>
         <div class="report-section-body">
@@ -2960,7 +2962,7 @@
             <div class="report-stat"><div class="report-stat-label">연초 누계</div><div class="report-stat-value">${cumSum.toFixed(0)}백만원</div></div>
           </div>
           <div class="report-detail-title">주요 투자 내역 (당월 효과순)</div>
-          <table class="report-table"><thead><tr><th>투자명</th><th>담당</th><th style="text-align:right">효과(M)</th><th style="text-align:right">인원</th></tr></thead><tbody>${rows}</tbody></table>
+          <table class="report-table"><colgroup><col><col style="width:36px"><col style="width:44px"><col style="width:34px"></colgroup><thead><tr><th>투자명</th><th>담당</th><th style="text-align:right">효과(M)</th><th style="text-align:right">인원</th></tr></thead><tbody>${rows}</tbody></table>
         </div>`;
       return sec;
     }
@@ -2973,9 +2975,10 @@
       const prev = idx > 0 ? (acts[idx-1] || 0) : 0;
       const cumSum = acts.slice(0, idx+1).reduce((a,b)=>a+b,0);
       const items = (kpiDetail && kpiDetail.설비개선 || []).filter(d => d.month === m);
-      const rows = items.map(d =>
-        `<tr><td>${d.투자내용.substring(0,26)}</td><td>${d.담당}</td><td style="text-align:right">${d.금액 ? d.금액+'M' : '-'}</td></tr>`
-      ).join('') || '<tr><td colspan="3" style="text-align:center;color:#9ca3af">데이터 없음</td></tr>';
+      const rows = items.map(d => {
+        const cont = d.투자내용.length > 24 ? d.투자내용.substring(0,24)+'…' : d.투자내용;
+        return `<tr><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cont}</td><td class="nowrap" style="width:36px">${d.담당}</td><td class="nowrap" style="text-align:right;width:46px">${d.금액 ? d.금액+'M' : '-'}</td></tr>`;
+      }).join('') || '<tr><td colspan="3" style="text-align:center;color:#9ca3af">데이터 없음</td></tr>';
       sec.innerHTML = `
         <div class="report-section-head"><span>설비 개선</span><span style="color:#1e40af;font-size:17px">${cur}건</span></div>
         <div class="report-section-body">
@@ -2985,7 +2988,7 @@
             <div class="report-stat"><div class="report-stat-label">연초 누계</div><div class="report-stat-value">${cumSum}건</div></div>
           </div>
           <div class="report-detail-title">당월 완료 항목</div>
-          <table class="report-table"><thead><tr><th>투자 내용</th><th>담당</th><th style="text-align:right">금액</th></tr></thead><tbody>${rows}</tbody></table>
+          <table class="report-table"><colgroup><col><col style="width:36px"><col style="width:46px"></colgroup><thead><tr><th>투자 내용</th><th>담당</th><th style="text-align:right">금액</th></tr></thead><tbody>${rows}</tbody></table>
         </div>`;
       return sec;
     }
@@ -3013,7 +3016,7 @@
       return sec;
     }
   </script>
-\n\n\n
+
 
 
 
