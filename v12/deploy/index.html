@@ -1038,7 +1038,10 @@
       <section id="section-home">
         <div class="grid" style="margin-bottom: 14px;">
           <div class="panel full">
-            <h3>이번 달 목표 대비 실적</h3>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+              <h3 style="margin:0;">이번 달 목표 대비 실적</h3>
+              <button class="report-btn report-btn-print" onclick="openMonthlyReport()">월간 보고서</button>
+            </div>
             <div class="month-label" id="month-label">-</div>
             <div class="month-grid-header">
               <div>지표</div>
@@ -1060,12 +1063,6 @@
               <button class="cum-tab" data-type="kpi" data-kpi="글로벌 생산기술">글로벌 생산기술</button>
             </div>
             <div id="monthly-cum" class="automation-chart"></div>
-          </div>
-        </div>
-        <div class="grid" style="margin-bottom:14px;">
-          <div class="panel full" style="display:flex;align-items:center;justify-content:space-between;">
-            <span style="font-size:13px;color:var(--muted)">월간 실적 보고서를 PDF로 출력합니다</span>
-            <button class="report-btn report-btn-print" onclick="openMonthlyReport()">월간 보고서</button>
           </div>
         </div>
       </section>
@@ -2464,8 +2461,34 @@
     }
 
     // ── 설비개선 탭 ──────────────────────────────────────────
+    // ── 필터 상태 ────────────────────────────────────────────────
+    const _fE = { month:'', mgr:'', status:'' };
+    const _fI = { type:'', location:'', category:'', mgr:'' };
+
+    function _sel(id, items, cur, all='전체') {
+      const opts = [all, ...new Set(items.filter(Boolean))].map(v =>
+        `<option value="${v==='전체'?'':v}" ${cur===v||(!cur&&v===all)?'selected':''}>${v}</option>`).join('');
+      return `<select id="${id}" onchange="_applyFilter()" style="font-size:12px;padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);cursor:pointer">${opts}</select>`;
+    }
+
+    function _applyFilter() {
+      _fE.month  = document.getElementById('fe-month')?.value  || '';
+      _fE.mgr    = document.getElementById('fe-mgr')?.value    || '';
+      _fE.status = document.getElementById('fe-status')?.value || '';
+      _fI.type     = document.getElementById('fi-type')?.value     || '';
+      _fI.location = document.getElementById('fi-location')?.value || '';
+      _fI.category = document.getElementById('fi-category')?.value || '';
+      _fI.mgr      = document.getElementById('fi-mgr')?.value      || '';
+      renderEquipTab(); renderInwonTab();
+    }
+
     function renderEquipTab() {
-      const items = _equipItems;
+      const all = _equipItems;
+      const items = all.filter(d =>
+        (!_fE.month  || String(d.month) === _fE.month) &&
+        (!_fE.mgr    || d.mgr === _fE.mgr) &&
+        (!_fE.status || d.status === _fE.status)
+      );
       const rows = items.map((d, i) => `
         <tr>
           <td style="color:var(--muted);font-size:11px">${i+1}</td>
@@ -2480,15 +2503,25 @@
             <button class="ibtn ibtn-d" onclick="deleteEquipItem(${d.id})">삭제</button>
           </td>
         </tr>`).join('');
+      const months = all.map(d=>String(d.month)).sort((a,b)=>+a-+b);
+      const mgrs   = all.map(d=>d.mgr).sort();
+      const stats  = all.map(d=>d.status);
       document.getElementById('itab-equip').innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-          <span class="subtle">${items.length}개 항목</span>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;padding:8px 10px;background:var(--panel-bg);border:1px solid var(--border);border-radius:6px;">
+          <span style="font-size:12px;color:var(--muted);font-weight:600;">필터</span>
+          <label style="font-size:12px;color:var(--muted)">완료월 ${_sel('fe-month', months, _fE.month)}</label>
+          <label style="font-size:12px;color:var(--muted)">담당자 ${_sel('fe-mgr', mgrs, _fE.mgr)}</label>
+          <label style="font-size:12px;color:var(--muted)">진행상황 ${_sel('fe-status', stats, _fE.status)}</label>
+          <button class="ibtn" onclick="_fE.month='';_fE.mgr='';_fE.status='';renderEquipTab()" style="font-size:11px;margin-left:4px">초기화</button>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span class="subtle">${items.length}/${all.length}개 항목</span>
           <button class="ibtn ibtn-p" onclick="openEquipAdd()">+ 항목 추가</button>
         </div>
         <div style="overflow-x:auto">
         <table class="input-tbl">
           <thead><tr><th>No</th><th>완료월</th><th>담당자</th><th>투자 내용</th><th>진행상황</th><th>금액(M)</th><th>비고/상세</th><th></th></tr></thead>
-          <tbody>${rows || '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">항목이 없습니다. 추가해주세요.</td></tr>'}</tbody>
+          <tbody>${rows || '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px">필터 조건에 맞는 항목이 없습니다.</td></tr>'}</tbody>
         </table></div>`;
     }
 
@@ -2558,7 +2591,13 @@
 
     // ── 인원합리화 탭 ─────────────────────────────────────────
     function renderInwonTab() {
-      const items = _inwonItems;
+      const all = _inwonItems;
+      const items = all.filter(d =>
+        (!_fI.type     || d.type === _fI.type) &&
+        (!_fI.location || d.location === _fI.location) &&
+        (!_fI.category || d.category === _fI.category) &&
+        (!_fI.mgr      || d.mgr === _fI.mgr)
+      );
       const rows = items.map((d, i) => `
         <tr>
           <td style="color:var(--muted);font-size:11px">${i+1}${d.isNew ? ' <span class="chip-new">신규</span>' : ''}</td>
@@ -2575,15 +2614,27 @@
             <button class="ibtn ibtn-d" onclick="deleteInwonItem(${d.id})">삭제</button>
           </td>
         </tr>`).join('');
+      const types  = all.map(d=>d.type).filter(Boolean).sort();
+      const locs   = all.map(d=>d.location).filter(Boolean).sort();
+      const cats   = all.map(d=>d.category).filter(Boolean).sort();
+      const mgrs   = all.map(d=>d.mgr).filter(Boolean).sort();
       document.getElementById('itab-inwon').innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-          <span class="subtle">${items.length}개 항목</span>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;padding:8px 10px;background:var(--panel-bg);border:1px solid var(--border);border-radius:6px;">
+          <span style="font-size:12px;color:var(--muted);font-weight:600;">필터</span>
+          <label style="font-size:12px;color:var(--muted)">구분 ${_sel('fi-type', types, _fI.type)}</label>
+          <label style="font-size:12px;color:var(--muted)">위치 ${_sel('fi-location', locs, _fI.location)}</label>
+          <label style="font-size:12px;color:var(--muted)">유형 ${_sel('fi-category', cats, _fI.category)}</label>
+          <label style="font-size:12px;color:var(--muted)">담당자 ${_sel('fi-mgr', mgrs, _fI.mgr)}</label>
+          <button class="ibtn" onclick="_fI.type='';_fI.location='';_fI.category='';_fI.mgr='';renderInwonTab()" style="font-size:11px;margin-left:4px">초기화</button>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span class="subtle">${items.length}/${all.length}개 항목</span>
           <button class="ibtn ibtn-p" onclick="openInwonAdd()">+ 신규 투자 추가</button>
         </div>
         <div style="overflow-x:auto">
         <table class="input-tbl">
           <thead><tr><th>No</th><th>구분</th><th>위치</th><th>유형</th><th>담당자</th><th>투자명</th><th>설비명</th><th>금액(M)</th><th>입고년월</th><th>인원</th><th>입력된 월</th><th></th></tr></thead>
-          <tbody>${rows || '<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:20px">항목이 없습니다.</td></tr>'}</tbody>
+          <tbody>${rows || '<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:20px">필터 조건에 맞는 항목이 없습니다.</td></tr>'}</tbody>
         </table></div>`;
     }
 
