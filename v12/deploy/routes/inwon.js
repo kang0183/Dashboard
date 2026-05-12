@@ -13,6 +13,8 @@ router.get('/', async (req, res) => {
     res.json(rows.map(r => ({
       id: r.id, year: r.year, no: r.no, type: r.type, location: r.location,
       category: r.category, name: r.name, equip: r.equip, mgr: r.mgr, headcount: r.headcount,
+      amt: r.amt, receiving: r.receiving,
+      months_elapsed: r.months_elapsed, recovery_rate: r.recovery_rate,
       isNew: !!r.is_new,
       monthly: monthlyMap[r.id] || {},
     })));
@@ -23,10 +25,10 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { year = new Date().getFullYear(), no, type, location, category, name, equip, mgr, headcount, isNew } = req.body;
+    const { year = new Date().getFullYear(), no, type, location, category, name, equip, mgr, headcount, amt, receiving, months_elapsed, recovery_rate, isNew } = req.body;
     const result = await query(
-      'INSERT INTO inwon (year, no, type, location, category, name, equip, mgr, headcount, is_new) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [year, no || null, type || null, location || null, category || null, name || '', equip || null, mgr || null, headcount || 0, isNew ? 1 : 0]
+      'INSERT INTO inwon (year, no, type, location, category, name, equip, mgr, headcount, amt, receiving, months_elapsed, recovery_rate, is_new) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      [year, no||null, type||null, location||null, category||null, name||'', equip||null, mgr||null, headcount||0, amt!=null?amt:null, receiving||null, months_elapsed||null, recovery_rate||null, isNew?1:0]
     );
     res.json({ id: result.insertId });
   } catch (e) {
@@ -36,10 +38,10 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
   try {
-    const { no, type, location, category, name, equip, mgr, headcount, isNew } = req.body;
+    const { no, type, location, category, name, equip, mgr, headcount, amt, receiving, months_elapsed, recovery_rate, isNew } = req.body;
     await query(
-      'UPDATE inwon SET no=?, type=?, location=?, category=?, name=?, equip=?, mgr=?, headcount=?, is_new=?, updated_at=CURRENT_TIMESTAMP WHERE id=?',
-      [no || null, type || null, location || null, category || null, name || '', equip || null, mgr || null, headcount || 0, isNew ? 1 : 0, req.params.id]
+      'UPDATE inwon SET no=?, type=?, location=?, category=?, name=?, equip=?, mgr=?, headcount=?, amt=?, receiving=?, months_elapsed=?, recovery_rate=?, is_new=?, updated_at=CURRENT_TIMESTAMP WHERE id=?',
+      [no||null, type||null, location||null, category||null, name||'', equip||null, mgr||null, headcount||0, amt!=null?amt:null, receiving||null, months_elapsed||null, recovery_rate||null, isNew?1:0, req.params.id]
     );
     res.json({ ok: true });
   } catch (e) {

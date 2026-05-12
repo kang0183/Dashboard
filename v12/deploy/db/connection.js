@@ -27,6 +27,10 @@ const SQLITE_DDL = `
     equip TEXT,
     mgr TEXT,
     headcount INTEGER DEFAULT 0,
+    amt REAL,
+    receiving TEXT,
+    months_elapsed INTEGER,
+    recovery_rate REAL,
     is_new INTEGER DEFAULT 0,
     note TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -77,7 +81,10 @@ function getSqlite() {
     _sqlite.exec(SQLITE_DDL);
     // migrations for columns added after initial schema
     try { _sqlite.exec("ALTER TABLE inwon ADD COLUMN location TEXT"); } catch (_) {}
-    try { _sqlite.exec("ALTER TABLE equip ADD COLUMN location TEXT"); } catch (_) {}
+    try { _sqlite.exec("ALTER TABLE inwon ADD COLUMN amt REAL"); } catch (_) {}
+    try { _sqlite.exec("ALTER TABLE inwon ADD COLUMN receiving TEXT"); } catch (_) {}
+    try { _sqlite.exec("ALTER TABLE inwon ADD COLUMN months_elapsed INTEGER"); } catch (_) {}
+    try { _sqlite.exec("ALTER TABLE inwon ADD COLUMN recovery_rate REAL"); } catch (_) {}
   }
   return _sqlite;
 }
