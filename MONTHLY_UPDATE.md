@@ -34,9 +34,10 @@ python3 v12/update_monthly.py
 
 | 확인 | 항목 | 예상값 예시 |
 |------|------|------|
-| ☐ | `data.json` → `overallRate` | 4월 기준 48.6% |
+| ☐ | `data.json` → `overallRate` | 해당 월 자동화율 % |
 | ☐ | `data.json` → `monthlyAutoRates` | 해당 월 index에 값 있음 |
-| ☐ | `index.html` → kpiMonthly actual 4월 | 인원합리화/설비개선/글로벌 값 |
+| ☐ | `data.json` → `monthlyChangedLines` | 이전 달 대비 변경 라인 목록 (빈 배열이면 비교 실패) |
+| ☐ | `index.html` → kpiMonthly actual | 인원합리화/설비개선/글로벌 당월 값 |
 | ☐ | 로컬 브라우저로 index.html 열기 | 자동화율 그래프, 월간 보고서 확인 |
 
 ---
@@ -73,6 +74,7 @@ bash v12/deploy.sh
 | ☐ | KPI 탭 → 글로벌 생산기술 차트 |
 | ☐ | 월간 보고서 버튼 → `N월 실적` 제목 |
 | ☐ | 월간 보고서 → 자동화율 당월/전월 대비/연초 대비 |
+| ☐ | 월간 보고서 → 수동→자동 전환 공정: **당월 변경 라인만** 표시되는지 확인 |
 | ☐ | 월간 보고서 → 인원합리화 당월 효과 |
 | ☐ | 월간 보고서 → 설비개선 당월 완료 건수 |
 | ☐ | 실적 입력 탭 → App Runner에서만 접속 가능 (Vercel은 서버 연결 필요 메시지) |
