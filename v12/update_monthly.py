@@ -66,7 +66,8 @@ def main():
     print(' 완료! 다음 단계:')
     print('   git add v12/deploy/index.html v12/deploy/data.json')
     print('   git commit -m "Update: N월 데이터"')
-    print('   git push origin main          # App Runner 자동 배포')
+    print('   git push origin main          # kang0183/Dashboard (백업)')
+    print('   git push company main         # CM-PE-Division (App Runner 배포)')
     print('   bash v12/deploy.sh            # Vercel 배포')
     print('=' * 55)
 

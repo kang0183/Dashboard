@@ -47,7 +47,8 @@ python3 v12/update_monthly.py
 # 변경 파일 커밋
 git add v12/deploy/index.html v12/deploy/data.json
 git commit -m "Update: N월 데이터 (자동화율 XX.X%, 인원합리화 XXX백만원)"
-git push origin main      # → GitHub Actions가 App Runner 자동 배포
+git push origin main      # kang0183/Dashboard (백업용)
+git push company main     # CM-PE-Division → App Runner 자동 배포 트리거
 
 # Vercel 배포 (외부 확인용)
 bash v12/deploy.sh
@@ -106,6 +107,6 @@ Excel 파일
 |------|------|------|
 | 월간 보고서가 전월 기준으로 열림 | KPI actual이 0 + monthlyAutoRates도 null | update_monthly.py 재실행 |
 | 자동화율 그래프 안 바뀜 | index.html const data 동기화 안 됨 | update_monthly.py 3단계 확인 |
-| App Runner는 안 바뀌고 Vercel만 바뀜 | git push 안 했거나 GH Actions 실패 | GitHub Actions 탭 확인 |
+| App Runner는 안 바뀌고 Vercel만 바뀜 | company remote에 push 안 함 | `git push company main` 실행 |
 | KPI 스크립트 에러: kpiMonthly block not found | `--output` 없이 실행 (Dashboard_dev.html 대상) | `--output v12/deploy/index.html` 붙이기 |
 | 캐시 사용으로 재계산 안 됨 | Excel mtime 안 바뀜 | `rm v12/v12_data_cache.json` 후 재실행 |
