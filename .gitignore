@@ -27,6 +27,7 @@
 !v12/deploy/db/
 !v12/deploy/db/connection.js
 !v12/deploy/db/schema.sql
+!v12/deploy/db/seed.js
 !v12/deploy/routes/
 !v12/deploy/routes/equip.js
 !v12/deploy/routes/inwon.js
